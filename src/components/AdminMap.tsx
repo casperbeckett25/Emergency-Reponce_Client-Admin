@@ -1,6 +1,7 @@
 import React from 'react';
 import { useEmergency } from '../context/EmergencyContext';
-import { MapPin, AlertTriangle, Users, Circle } from 'lucide-react';
+import { MapPin, AlertTriangle, Users, Circle, RefreshCw } from 'lucide-react';
+import InteractiveMap from './InteractiveMap';
 
 export default function AdminMap() {
   const { clients, alerts } = useEmergency();
@@ -8,84 +9,63 @@ export default function AdminMap() {
   const activeClients = clients.filter(client => client.status === 'active' && client.location);
   const activeAlerts = alerts.filter(alert => alert.status === 'active');
 
+  // Prepare map locations
+  const mapLocations = [
+    // Client locations
+    ...activeClients.map(client => ({
+      id: client.id,
+      lat: client.location?.lat || 0,
+      lng: client.location?.lng || 0,
+      name: client.name,
+      type: 'client' as const
+    })),
+    // Alert locations
+    ...activeAlerts.map(alert => {
+      const client = clients.find(c => c.id === alert.clientId);
+      return {
+        id: alert.id,
+        lat: alert.location.lat,
+        lng: alert.location.lng,
+        name: client?.name || 'Unknown Client',
+        type: 'alert' as const,
+        status: alert.status,
+        alertType: alert.type
+      };
+    })
+  ];
+
+  const handleLocationClick = (location: any) => {
+    console.log('Location clicked:', location);
+  };
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
       {/* Map View */}
       <div className="lg:col-span-3">
         <div className="bg-white rounded-lg shadow-sm border">
           <div className="px-6 py-4 border-b bg-gray-50">
-            <h3 className="text-lg font-medium text-gray-900">Live Client Map</h3>
-            <p className="text-sm text-gray-500">Real-time locations and alerts</p>
-          </div>
-          
-          <div className="relative">
-            <div className="h-96 bg-gradient-to-br from-blue-50 to-green-50 overflow-hidden">
-              {/* Simulated Map Background */}
-              <div className="absolute inset-0 opacity-20">
-                <div className="grid grid-cols-12 grid-rows-8 h-full w-full">
-                  {Array.from({ length: 96 }).map((_, i) => (
-                    <div key={i} className="border border-gray-300"></div>
-                  ))}
-                </div>
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-medium text-gray-900">Live Client Map</h3>
+                <p className="text-sm text-gray-500">Real-time locations and alerts</p>
               </div>
-              
-              {/* Mock Streets */}
-              <div className="absolute inset-0">
-                <div className="absolute top-1/4 left-0 right-0 h-1 bg-gray-400 opacity-30"></div>
-                <div className="absolute top-3/4 left-0 right-0 h-1 bg-gray-400 opacity-30"></div>
-                <div className="absolute left-1/4 top-0 bottom-0 w-1 bg-gray-400 opacity-30"></div>
-                <div className="absolute left-3/4 top-0 bottom-0 w-1 bg-gray-400 opacity-30"></div>
-              </div>
-
-              {/* Client Locations */}
-              {activeClients.map((client, index) => {
-                const hasAlert = activeAlerts.some(alert => alert.clientId === client.id);
-                const positions = [
-                  { top: '20%', left: '30%' },
-                  { top: '60%', left: '70%' },
-                  { top: '40%', left: '50%' },
-                  { top: '30%', left: '20%' },
-                  { top: '70%', left: '80%' },
-                ];
-                const position = positions[index % positions.length];
-                
-                return (
-                  <div
-                    key={client.id}
-                    className="absolute transform -translate-x-1/2 -translate-y-1/2"
-                    style={{ top: position.top, left: position.left }}
-                  >
-                    <div className="relative group">
-                      <div className={`w-8 h-8 rounded-full border-4 border-white shadow-lg flex items-center justify-center ${
-                        hasAlert ? 'bg-red-600 animate-pulse' : 'bg-blue-600'
-                      }`}>
-                        {hasAlert ? (
-                          <AlertTriangle className="w-4 h-4 text-white" />
-                        ) : (
-                          <div className="w-2 h-2 bg-white rounded-full"></div>
-                        )}
-                      </div>
-                      
-                      {/* Tooltip */}
-                      <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 hidden group-hover:block">
-                        <div className="bg-black text-white px-3 py-2 rounded-lg text-sm whitespace-nowrap">
-                          <p className="font-medium">{client.name}</p>
-                          <p className="text-xs">{client.phone}</p>
-                          {hasAlert && <p className="text-red-300 text-xs">⚠️ ACTIVE ALERT</p>}
-                        </div>
-                        <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-2 h-2 bg-black rotate-45"></div>
-                      </div>
-                      
-                      {/* Pulsing circle for alerts */}
-                      {hasAlert && (
-                        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-16 h-16 bg-red-200 rounded-full animate-ping opacity-75"></div>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
+              <button
+                onClick={() => window.location.reload()}
+                className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors"
+                title="Refresh map"
+              >
+                <RefreshCw className="w-5 h-5" />
+              </button>
             </div>
           </div>
+          
+          <InteractiveMap
+            locations={mapLocations}
+            center={{ lat: 40.7128, lng: -74.0060 }}
+            zoom={12}
+            onLocationClick={handleLocationClick}
+            className="h-96"
+          />
         </div>
       </div>
 

@@ -1,6 +1,7 @@
 import React from 'react';
 import { useEmergency } from '../context/EmergencyContext';
 import { MapPin, Navigation, RefreshCw } from 'lucide-react';
+import InteractiveMap from './InteractiveMap';
 
 export default function LocationMap() {
   const { currentClient, updateLocation } = useEmergency();
@@ -64,45 +65,22 @@ export default function LocationMap() {
   }
 
   return (
-    <div className="relative">
-      <div className="h-96 bg-gradient-to-br from-blue-50 to-green-50 rounded-lg flex items-center justify-center overflow-hidden">
-        {/* Simulated Map Interface */}
-        <div className="relative w-full h-full">
-          {/* Map Background Pattern */}
-          <div className="absolute inset-0 opacity-20">
-            <div className="grid grid-cols-8 grid-rows-6 h-full w-full">
-              {Array.from({ length: 48 }).map((_, i) => (
-                <div key={i} className="border border-gray-300"></div>
-              ))}
-            </div>
-          </div>
-          
-          {/* Current Location Pin */}
-          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
-            <div className="relative">
-              <div className="w-8 h-8 bg-red-600 rounded-full border-4 border-white shadow-lg flex items-center justify-center animate-pulse">
-                <div className="w-2 h-2 bg-white rounded-full"></div>
-              </div>
-              <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 bg-white px-3 py-1 rounded-full shadow-md border">
-                <p className="text-xs font-medium text-gray-700">You are here</p>
-              </div>
-              {/* Pulsing circle animation */}
-              <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-16 h-16 bg-red-200 rounded-full animate-ping opacity-75"></div>
-            </div>
-          </div>
-
-          {/* Mock Streets */}
-          <div className="absolute inset-0">
-            <div className="absolute top-1/4 left-0 right-0 h-1 bg-gray-400 opacity-30"></div>
-            <div className="absolute top-3/4 left-0 right-0 h-1 bg-gray-400 opacity-30"></div>
-            <div className="absolute left-1/4 top-0 bottom-0 w-1 bg-gray-400 opacity-30"></div>
-            <div className="absolute left-3/4 top-0 bottom-0 w-1 bg-gray-400 opacity-30"></div>
-          </div>
-        </div>
-      </div>
+    <div className="relative h-96">
+      <InteractiveMap
+        locations={[{
+          id: 'current',
+          lat: currentClient.location.lat,
+          lng: currentClient.location.lng,
+          name: 'Your Location',
+          type: 'current'
+        }]}
+        center={currentClient.location}
+        zoom={15}
+        className="h-full"
+      />
 
       {/* Location Info */}
-      <div className="absolute bottom-4 left-4 right-4 bg-white rounded-lg shadow-lg p-4 border">
+      <div className="absolute bottom-4 left-4 bg-white rounded-lg shadow-lg p-4 border">
         <div className="flex items-center justify-between">
           <div>
             <p className="text-sm font-medium text-gray-900">Current Location</p>

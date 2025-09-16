@@ -14,6 +14,20 @@ export default function Login({ isAdmin = false }: LoginProps) {
   const [error, setError] = useState('');
   const { signIn } = useAuth();
 
+  // Auto-fill last used credentials on component mount
+  React.useEffect(() => {
+    const lastEmail = localStorage.getItem('lastLoginEmail');
+    const adminAutoLogin = localStorage.getItem('adminAutoLogin');
+    
+    if (isAdmin && adminAutoLogin && lastEmail?.includes('@admin.')) {
+      setEmail(lastEmail);
+      setPassword('admin123');
+    } else if (!isAdmin && lastEmail && !lastEmail.includes('@admin.')) {
+      setEmail(lastEmail);
+      setPassword('client123');
+    }
+  }, [isAdmin]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);

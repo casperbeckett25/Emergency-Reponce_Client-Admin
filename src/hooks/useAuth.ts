@@ -29,6 +29,15 @@ export function useAuth() {
       email,
       password,
     });
+    
+    // Auto-login: remember credentials in localStorage for convenience
+    if (data.user && !error) {
+      localStorage.setItem('lastLoginEmail', email);
+      if (email.includes('@admin.')) {
+        localStorage.setItem('adminAutoLogin', 'true');
+      }
+    }
+    
     return { data, error };
   };
 

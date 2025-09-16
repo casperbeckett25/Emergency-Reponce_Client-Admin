@@ -25,11 +25,21 @@ export default function AddClientModal({ isOpen, onClose, onClientAdded }: AddCl
     setError('');
 
     try {
-      // For now, create client record without auth user
-      // In production, you'd want to use a server-side function or service role
+      // Create auth user with default password
+      const defaultPassword = 'client123';
+      
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: formData.email,
+        password: defaultPassword,
+      });
+
+      if (authError) throw authError;
+
+      // Create client record with the auth user ID
       const { error: clientError } = await supabase
         .from('clients')
         .insert({
+          id: authData.user?.id,
           name: formData.name,
           phone: formData.phone,
           email: formData.email,
@@ -49,6 +59,8 @@ export default function AddClientModal({ isOpen, onClose, onClientAdded }: AddCl
       });
       onClientAdded();
       onClose();
+      
+      alert(`Client added successfully!\nLogin credentials:\nEmail: ${formData.email}\nPassword: ${defaultPassword}`);
     } catch (err: any) {
       setError(err.message || 'Failed to add client');
     } finally {
@@ -178,8 +190,8 @@ export default function AddClientModal({ isOpen, onClose, onClientAdded }: AddCl
               <div>
                 <h5 className="text-sm font-medium text-blue-900">Account Setup</h5>
                 <p className="text-sm text-blue-700 mt-1">
-                  Client information will be stored. For login access, create a Supabase auth user 
-                  manually in your Supabase dashboard with the same email address.
+                  A new client account will be created with the default password "client123". 
+                  The client can change this password after their first login.
                 </p>
               </div>
             </div>
