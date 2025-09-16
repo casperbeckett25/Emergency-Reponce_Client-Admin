@@ -17,7 +17,11 @@ export default function LocationMap() {
         },
         (error) => {
           console.error('Geolocation error:', error);
-          alert('Unable to get location. Please check your browser settings.');
+          if (error.code === error.PERMISSION_DENIED) {
+            alert('Location access was denied. To enable location services:\n\n1. Click the location icon in your browser\'s address bar\n2. Select "Allow" for location access\n3. Refresh the page and try again\n\nOr check your browser settings under Privacy & Security > Site Settings > Location.');
+          } else {
+            alert('Unable to get location. Please check your browser settings.');
+          }
         }
       );
     }
