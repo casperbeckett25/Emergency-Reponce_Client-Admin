@@ -54,16 +54,18 @@ export default function InteractiveMap({
     setLoading(true);
     try {
       // Calculate tile coordinates for the current view
-      const tileSize = 256;
-      const numTiles = 3; // 3x3 grid of tiles
+      const numTiles = 3;
       const tiles: string[][] = [];
+
+      // Calculate the center tile coordinates
+      const centerTileX = Math.floor((mapCenter.lng + 180) / 360 * Math.pow(2, mapZoom));
+      const centerTileY = Math.floor((1 - Math.log(Math.tan(mapCenter.lat * Math.PI / 180) + 1 / Math.cos(mapCenter.lat * Math.PI / 180)) / Math.PI) / 2 * Math.pow(2, mapZoom));
 
       for (let y = 0; y < numTiles; y++) {
         const row: string[] = [];
         for (let x = 0; x < numTiles; x++) {
-          // Calculate tile coordinates based on lat/lng and zoom
-          const tileX = Math.floor((mapCenter.lng + 180) / 360 * Math.pow(2, mapZoom)) + (x - 1);
-          const tileY = Math.floor((1 - Math.log(Math.tan(mapCenter.lat * Math.PI / 180) + 1 / Math.cos(mapCenter.lat * Math.PI / 180)) / Math.PI) / 2 * Math.pow(2, mapZoom)) + (y - 1);
+          const tileX = centerTileX + (x - 1);
+          const tileY = centerTileY + (y - 1);
           
           let tileUrl;
           if (mapStyle === 'satellite') {
@@ -149,11 +151,25 @@ export default function InteractiveMap({
 
   // Calculate marker positions based on map bounds
   const getMarkerPosition = (location: MapLocation) => {
+    // Calculate proper bounds based on tile system
+    const scale = Math.pow(2, mapZoom);
+    const tileSize = 256;
+    const pixelsPerDegree = scale * tileSize / 360;
+    
+    const mapWidth = 3 * tileSize; // 3 tiles wide
+    const mapHeight = 3 * tileSize; // 3 tiles high
+    
+    const degreesPerPixelX = 360 / (scale * tileSize);
+    const degreesPerPixelY = 360 / (scale * tileSize);
+    
+    const halfWidthDegrees = (mapWidth / 2) * degreesPerPixelX;
+    const halfHeightDegrees = (mapHeight / 2) * degreesPerPixelY;
+    
     const mapBounds = {
-      north: mapCenter.lat + (0.01 / Math.pow(2, mapZoom - 10)),
-      south: mapCenter.lat - (0.01 / Math.pow(2, mapZoom - 10)),
-      east: mapCenter.lng + (0.01 / Math.pow(2, mapZoom - 10)),
-      west: mapCenter.lng - (0.01 / Math.pow(2, mapZoom - 10))
+      north: mapCenter.lat + halfHeightDegrees,
+      south: mapCenter.lat - halfHeightDegrees,
+      east: mapCenter.lng + halfWidthDegrees,
+      west: mapCenter.lng - halfWidthDegrees
     };
 
     const x = ((location.lng - mapBounds.west) / (mapBounds.east - mapBounds.west)) * 100;
