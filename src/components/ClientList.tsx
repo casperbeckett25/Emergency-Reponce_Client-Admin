@@ -1,16 +1,24 @@
 import React from 'react';
 import { useEmergency } from '../context/EmergencyContext';
-import { User, Phone, MapPin, Circle, Plus } from 'lucide-react';
+import { User, Phone, MapPin, Circle, Plus, MoreVertical, Trash2 } from 'lucide-react';
 import AddClientModal from './AddClientModal';
+import { supabase } from '../lib/supabase';
 
 export default function ClientList() {
   const { clients, alerts, refreshData } = useEmergency();
   const [showAddModal, setShowAddModal] = React.useState(false);
+  const [showDropdown, setShowDropdown] = React.useState<string | null>(null);
 
   const getClientAlerts = (clientId: string) => {
     return alerts.filter(alert => alert.clientId === clientId && alert.status === 'active');
   };
 
+  const deleteClient = async (clientId: string) => {
+    if (confirm('Are you sure you want to delete this client?')) {
+      await supabase.from('clients').delete().eq('id', clientId);
+      refreshData();
+    }
+  };
   return (
     <div className="bg-white rounded-lg shadow-sm border">
       <div className="px-6 py-4 border-b bg-gray-50">
@@ -47,6 +55,9 @@ export default function ClientList() {
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Active Alerts
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Actions
               </th>
             </tr>
           </thead>
@@ -108,6 +119,28 @@ export default function ClientList() {
                       </div>
                     ) : (
                       <span className="text-sm text-gray-400">None</span>
+                    )}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap relative">
+                    <button
+                      onClick={() => setShowDropdown(showDropdown === client.id ? null : client.id)}
+                      className="p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100"
+                    >
+                      <MoreVertical className="w-4 h-4" />
+                    </button>
+                    {showDropdown === client.id && (
+                      <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-10 border">
+                        <button
+                          onClick={() => {
+                            deleteClient(client.id);
+                            setShowDropdown(null);
+                          }}
+                          className="flex items-center w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50"
+                        >
+                          <Trash2 className="w-4 h-4 mr-2" />
+                          Delete Client
+                        </button>
+                      </div>
                     )}
                   </td>
                 </tr>

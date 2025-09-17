@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { X, User, Phone, Mail, Home, Contact, AlertCircle } from 'lucide-react';
+import { X, User, Phone, Mail, Home, Contact, AlertCircle, Search } from 'lucide-react';
 
 interface AddClientModalProps {
   isOpen: boolean;
@@ -18,6 +18,7 @@ export default function AddClientModal({ isOpen, onClose, onClientAdded }: AddCl
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [searchingAddress, setSearchingAddress] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -75,6 +76,23 @@ export default function AddClientModal({ isOpen, onClose, onClientAdded }: AddCl
     }));
   };
 
+  const searchAddress = async () => {
+    if (!formData.address) return;
+    setSearchingAddress(true);
+    try {
+      const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(formData.address)}&limit=1`);
+      const data = await response.json();
+      if (data[0]) {
+        alert(`Address found: ${data[0].display_name}\nCoordinates: ${data[0].lat}, ${data[0].lon}`);
+      } else {
+        alert('Address not found');
+      }
+    } catch (err) {
+      alert('Error searching address');
+    } finally {
+      setSearchingAddress(false);
+    }
+  };
   if (!isOpen) return null;
 
   return (
@@ -155,15 +173,25 @@ export default function AddClientModal({ isOpen, onClose, onClientAdded }: AddCl
               <Home className="w-4 h-4 inline mr-2" />
               Address
             </label>
-            <input
-              type="text"
-              name="address"
-              required
-              value={formData.address}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              placeholder="123 Main St, City, State"
-            />
+            <div className="flex space-x-2">
+              <input
+                type="text"
+                name="address"
+                required
+                value={formData.address}
+                onChange={handleChange}
+                className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                placeholder="123 Main St, City, State"
+              />
+              <button
+                type="button"
+                onClick={searchAddress}
+                disabled={searchingAddress || !formData.address}
+                className="px-3 py-2 bg-gray-100 text-gray-600 rounded-md hover:bg-gray-200 disabled:opacity-50"
+              >
+                <Search className="w-4 h-4" />
+              </button>
+            </div>
           </div>
 
           <div>

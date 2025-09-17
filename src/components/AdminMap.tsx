@@ -12,10 +12,10 @@ export default function AdminMap() {
   // Prepare map locations
   const mapLocations = [
     // Client locations
-    ...activeClients.map(client => ({
+    ...activeClients.filter(client => client.location && (client.location.lat !== 0 || client.location.lng !== 0)).map(client => ({
       id: client.id,
-      lat: client.location?.lat || 0,
-      lng: client.location?.lng || 0,
+      lat: client.location!.lat,
+      lng: client.location!.lng,
       name: client.name,
       type: 'client' as const
     })),
