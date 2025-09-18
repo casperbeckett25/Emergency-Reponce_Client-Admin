@@ -18,7 +18,9 @@ export default function AddClientModal({ isOpen, onClose, onClientAdded }: AddCl
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [searchingAddress, setSearchingAddress] = useState(false);
+  const [addressSuggestions, setAddressSuggestions] = useState<any[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -70,28 +72,53 @@ export default function AddClientModal({ isOpen, onClose, onClientAdded }: AddCl
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
-      [e.target.name]: e.target.value
+      [name]: value
     }));
+    
+    // Handle address autocomplete
+    if (name === 'address' && value.length > 2) {
+      // Clear existing timeout
+      if (searchTimeout) {
+        clearTimeout(searchTimeout);
+      }
+      
+      // Set new timeout for search
+      const timeout = setTimeout(() => {
+        searchAddresses(value);
+      }, 300);
+      
+      setSearchTimeout(timeout);
+    } else if (name === 'address' && value.length <= 2) {
+      setAddressSuggestions([]);
+      setShowSuggestions(false);
+    }
   };
 
-  const searchAddress = async () => {
-    if (!formData.address) return;
-    setSearchingAddress(true);
+  const searchAddresses = async (query: string) => {
     try {
-      const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(formData.address)}&limit=1`);
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5&addressdetails=1`
+      );
       const data = await response.json();
-      if (data[0]) {
-        alert(`Address found: ${data[0].display_name}\nCoordinates: ${data[0].lat}, ${data[0].lon}`);
-      } else {
-        alert('Address not found');
-      }
+      setAddressSuggestions(data);
+      setShowSuggestions(data.length > 0);
     } catch (err) {
-      alert('Error searching address');
-    } finally {
-      setSearchingAddress(false);
+      console.error('Error searching addresses:', err);
+      setAddressSuggestions([]);
+      setShowSuggestions(false);
     }
+  };
+  
+  const selectAddress = (suggestion: any) => {
+    setFormData(prev => ({
+      ...prev,
+      address: suggestion.display_name
+    }));
+    setShowSuggestions(false);
+    setAddressSuggestions([]);
   };
   if (!isOpen) return null;
 
@@ -173,24 +200,45 @@ export default function AddClientModal({ isOpen, onClose, onClientAdded }: AddCl
               <Home className="w-4 h-4 inline mr-2" />
               Address
             </label>
-            <div className="flex space-x-2">
+            <div className="relative">
               <input
                 type="text"
                 name="address"
                 required
                 value={formData.address}
                 onChange={handleChange}
-                className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                onFocus={() => setShowSuggestions(addressSuggestions.length > 0)}
+                onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 placeholder="123 Main St, City, State"
+                autoComplete="off"
               />
-              <button
-                type="button"
-                onClick={searchAddress}
-                disabled={searchingAddress || !formData.address}
-                className="px-3 py-2 bg-gray-100 text-gray-600 rounded-md hover:bg-gray-200 disabled:opacity-50"
-              >
-                <Search className="w-4 h-4" />
-              </button>
+              
+              {/* Address suggestions dropdown */}
+              {showSuggestions && addressSuggestions.length > 0 && (
+                <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                  {addressSuggestions.map((suggestion, index) => (
+                    <button
+                      key={index}
+                      type="button"
+                      onClick={() => selectAddress(suggestion)}
+                      className="w-full px-4 py-3 text-left hover:bg-gray-50 border-b border-gray-100 last:border-b-0"
+                    >
+                      <div className="flex items-start space-x-2">
+                        <MapPin className="w-4 h-4 text-gray-400 mt-0.5 flex-shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-gray-900 truncate">
+                            {suggestion.display_name.split(',').slice(0, 2).join(',')}
+                          </p>
+                          <p className="text-xs text-gray-500 truncate">
+                            {suggestion.display_name}
+                          </p>
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 

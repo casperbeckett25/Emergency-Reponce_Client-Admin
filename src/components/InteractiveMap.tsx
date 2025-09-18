@@ -32,13 +32,13 @@ export default function InteractiveMap({
   const [mapZoom, setMapZoom] = useState(zoom);
   const [selectedLocation, setSelectedLocation] = useState<MapLocation | null>(null);
   const [mapStyle, setMapStyle] = useState<'street' | 'satellite'>('street');
-  const [mapTiles, setMapTiles] = useState<string[][]>([]);
+  const [mapTiles, setMapTiles] = useState<string[][]>([[], [], []]);
   const [loading, setLoading] = useState(true);
   const mapRef = useRef<HTMLDivElement>(null);
 
   // OpenStreetMap tile server URLs
   const tileServers = {
-    street: 'https://tile.openstreetmap.org',
+    street: 'https://a.tile.openstreetmap.org',
     satellite: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile'
   };
 
@@ -53,21 +53,30 @@ export default function InteractiveMap({
   const loadMapTiles = async () => {
     setLoading(true);
     try {
-      // Use a single large tile approach for better alignment
-      const tiles: string[][] = [[]];
+      // Calculate 3x3 tile grid for better quality
+      const tiles: string[][] = [[], [], []];
       
-      // Calculate single tile coordinates
-      const tileX = Math.floor((mapCenter.lng + 180) / 360 * Math.pow(2, mapZoom));
+      // Calculate center tile coordinates
+      const centerTileX = Math.floor((mapCenter.lng + 180) / 360 * Math.pow(2, mapZoom));
       const tileY = Math.floor((1 - Math.log(Math.tan(mapCenter.lat * Math.PI / 180) + 1 / Math.cos(mapCenter.lat * Math.PI / 180)) / Math.PI) / 2 * Math.pow(2, mapZoom));
       
-      let tileUrl;
-      if (mapStyle === 'satellite') {
-        tileUrl = `${tileServers.satellite}/${mapZoom}/${tileY}/${tileX}`;
-      } else {
-        tileUrl = `${tileServers.street}/${mapZoom}/${tileX}/${tileY}.png`;
+      // Load 3x3 grid of tiles
+      for (let row = 0; row < 3; row++) {
+        for (let col = 0; col < 3; col++) {
+          const tileX = centerTileX - 1 + col;
+          const currentTileY = tileY - 1 + row;
+          
+          let tileUrl;
+          if (mapStyle === 'satellite') {
+            tileUrl = `${tileServers.satellite}/${mapZoom}/${currentTileY}/${tileX}`;
+          } else {
+            tileUrl = `${tileServers.street}/${mapZoom}/${tileX}/${currentTileY}.png`;
+          }
+          
+          tiles[row].push(tileUrl);
+        }
       }
       
-      tiles[0].push(tileUrl);
       setMapTiles(tiles);
     } catch (error) {
       console.error('Error loading map tiles:', error);
@@ -140,19 +149,25 @@ export default function InteractiveMap({
 
   // Calculate marker positions based on map bounds
   const getMarkerPosition = (location: MapLocation) => {
-    // Simple positioning relative to map center
+    // Calculate position using proper web mercator projection
     const latDiff = location.lat - mapCenter.lat;
     const lngDiff = location.lng - mapCenter.lng;
     
-    // Scale based on zoom level
-    const scale = Math.pow(2, mapZoom - 10);
+    // Convert to pixels using web mercator projection
+    const pixelsPerDegree = 256 * Math.pow(2, mapZoom) / 360;
+    const pixelsPerDegreeLat = 256 * Math.pow(2, mapZoom) / 360 * Math.cos(mapCenter.lat * Math.PI / 180);
     
-    const x = 50 + (lngDiff * scale * 100);
-    const y = 50 - (latDiff * scale * 100);
+    // Calculate pixel offset from center
+    const xOffset = lngDiff * pixelsPerDegree;
+    const yOffset = -latDiff * pixelsPerDegreeLat;
     
-    return { 
-      x: Math.max(5, Math.min(95, x)), 
-      y: Math.max(5, Math.min(95, y)) 
+    // Convert to percentage of map container (3x3 tiles = 768px total)
+    const x = 50 + (xOffset / 768) * 100;
+    const y = 50 + (yOffset / 768) * 100;
+    
+    return {
+      x: Math.max(0, Math.min(100, x)),
+      y: Math.max(0, Math.min(100, y))
     };
   };
 
@@ -169,15 +184,31 @@ export default function InteractiveMap({
           </div>
         ) : (
           <div className="h-full w-full relative">
-            {mapTiles[0] && mapTiles[0][0] && (
-              <img
-                src={mapTiles[0][0]}
-                alt="Map tile"
-                className="w-full h-full object-cover"
-                onError={(e) => {
-                  (e.target as HTMLImageElement).style.display = 'none';
-                }}
-              />
+            {/* Render 3x3 tile grid */}
+            {mapTiles.map((row, rowIndex) => (
+              <div key={rowIndex} className="flex h-1/3">
+                {row.map((tileUrl, colIndex) => (
+                  <img
+                    key={`${rowIndex}-${colIndex}`}
+                    src={tileUrl}
+                    alt={`Map tile ${rowIndex}-${colIndex}`}
+                    className="w-1/3 h-full object-cover"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).style.display = 'none';
+                    }}
+                  />
+                ))}
+              </div>
+            ))}
+            <div className="absolute inset-0 bg-gray-300 -z-10"></div>
+          </div>
+        )}
+
+        {/* Center crosshair for debugging */}
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none z-10">
+          <div className="w-full h-0.5 bg-red-500 absolute top-1/2 transform -translate-y-1/2"></div>
+          <div className="h-full w-0.5 bg-red-500 absolute left-1/2 transform -translate-x-1/2"></div>
+        </div></parameter>
             )}
             <div className="absolute inset-0 bg-gray-300 -z-10"></div>
           </div>
