@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { X, User, Phone, Mail, Home, Contact, AlertCircle, Search } from 'lucide-react';
+import { X, User, Phone, Mail, Home, Contact, AlertCircle, Search, MapPin } from 'lucide-react';
 
 interface AddClientModalProps {
   isOpen: boolean;
