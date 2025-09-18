@@ -208,11 +208,7 @@ export default function InteractiveMap({
         <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none z-10">
           <div className="w-full h-0.5 bg-red-500 absolute top-1/2 transform -translate-y-1/2"></div>
           <div className="h-full w-0.5 bg-red-500 absolute left-1/2 transform -translate-x-1/2"></div>
-        </div></parameter>
-            )}
-            <div className="absolute inset-0 bg-gray-300 -z-10"></div>
-          </div>
-        )}
+        </div>
 
         {/* Location Markers */}
         {!loading && locations.map((location) => {
