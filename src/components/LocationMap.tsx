@@ -69,7 +69,7 @@ export default function LocationMap() {
   }
 
   return (
-    <div className="relative h-96">
+    <div className="relative h-[400px]">
       <InteractiveMap
         locations={[{
           id: 'current',

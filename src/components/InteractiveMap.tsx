@@ -30,6 +30,8 @@ export default function InteractiveMap({
 }: InteractiveMapProps) {
   const [mapCenter, setMapCenter] = useState(center);
   const [mapZoom, setMapZoom] = useState(zoom);
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState<{ x: number; y: number } | null>(null);
   const [selectedLocation, setSelectedLocation] = useState<MapLocation | null>(null);
   const [mapStyle, setMapStyle] = useState<'street' | 'satellite'>('street');
   const [mapTiles, setMapTiles] = useState<string[][]>([[], [], []]);
@@ -171,10 +173,47 @@ export default function InteractiveMap({
     };
   };
 
+  const handleMouseDown = (e: React.MouseEvent) => {
+    setIsDragging(true);
+    setDragStart({ x: e.clientX, y: e.clientY });
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isDragging || !dragStart) return;
+
+    const deltaX = e.clientX - dragStart.x;
+    const deltaY = e.clientY - dragStart.y;
+
+    if (Math.abs(deltaX) > 5 || Math.abs(deltaY) > 5) {
+      const pixelsPerDegree = 256 * Math.pow(2, mapZoom) / 360;
+      const lngDelta = deltaX / pixelsPerDegree;
+      const latDelta = -deltaY / pixelsPerDegree;
+
+      setMapCenter(prev => ({
+        lat: Math.max(-85, Math.min(85, prev.lat + latDelta)),
+        lng: ((prev.lng + lngDelta + 180) % 360) - 180
+      }));
+
+      setDragStart({ x: e.clientX, y: e.clientY });
+    }
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+    setDragStart(null);
+  };
+
   return (
     <div className={`relative ${className} bg-gray-100 rounded-lg overflow-hidden border`}>
       {/* Map Tiles */}
-      <div ref={mapRef} className="absolute inset-0">
+      <div
+        ref={mapRef}
+        className="absolute inset-0 cursor-grab active:cursor-grabbing"
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseUp}
+      >
         {loading ? (
           <div className="absolute inset-0 bg-gray-200 flex items-center justify-center">
             <div className="text-center">
@@ -204,11 +243,6 @@ export default function InteractiveMap({
           </div>
         )}
 
-        {/* Center crosshair for debugging */}
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none z-10">
-          <div className="w-full h-0.5 bg-red-500 absolute top-1/2 transform -translate-y-1/2"></div>
-          <div className="h-full w-0.5 bg-red-500 absolute left-1/2 transform -translate-x-1/2"></div>
-        </div>
 
         {/* Location Markers */}
         {!loading && locations.map((location) => {

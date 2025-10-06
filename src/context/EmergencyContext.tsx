@@ -56,7 +56,8 @@ export function EmergencyProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (user) {
       loadData();
-      setupRealtimeSubscriptions();
+      const cleanup = setupRealtimeSubscriptions();
+      return cleanup;
     }
   }, [user]);
 
@@ -115,7 +116,7 @@ export function EmergencyProvider({ children }: { children: React.ReactNode }) {
       .from('clients')
       .select('*')
       .eq('id', user.id)
-      .single();
+      .maybeSingle();
 
     if (error) {
       console.error('Error loading current client:', error);
@@ -202,12 +203,15 @@ export function EmergencyProvider({ children }: { children: React.ReactNode }) {
   };
 
   const setupRealtimeSubscriptions = () => {
+    const subscriptions: any[] = [];
+
     // Subscribe to alerts changes
-    const alertsSubscription = supabase
-      .channel('alerts')
-      .on('postgres_changes', 
+    const alertsChannel = supabase
+      .channel('alerts-channel')
+      .on('postgres_changes',
         { event: '*', schema: 'public', table: 'alerts' },
-        () => {
+        (payload) => {
+          console.log('Alert change received:', payload);
           if (isAdmin()) {
             loadAlerts();
           } else {
@@ -217,25 +221,28 @@ export function EmergencyProvider({ children }: { children: React.ReactNode }) {
       )
       .subscribe();
 
+    subscriptions.push(alertsChannel);
+
     // Subscribe to clients changes (admin only)
-    let clientsSubscription;
     if (isAdmin()) {
-      clientsSubscription = supabase
-        .channel('clients')
+      const clientsChannel = supabase
+        .channel('clients-channel')
         .on('postgres_changes',
           { event: '*', schema: 'public', table: 'clients' },
-          () => {
+          (payload) => {
+            console.log('Client change received:', payload);
             loadClients();
           }
         )
         .subscribe();
+
+      subscriptions.push(clientsChannel);
     }
 
     return () => {
-      alertsSubscription.unsubscribe();
-      if (clientsSubscription) {
-        clientsSubscription.unsubscribe();
-      }
+      subscriptions.forEach(sub => {
+        supabase.removeChannel(sub);
+      });
     };
   };
 
@@ -275,6 +282,9 @@ export function EmergencyProvider({ children }: { children: React.ReactNode }) {
     try {
       const location = await getCurrentLocation();
 
+      // Update client location first
+      await updateLocation(location);
+
       const { error } = await supabase
         .from('alerts')
         .insert({
@@ -287,9 +297,6 @@ export function EmergencyProvider({ children }: { children: React.ReactNode }) {
         });
 
       if (error) throw error;
-
-      // Update client location
-      await updateLocation(location);
       
       // Refresh alerts
       if (isAdmin()) {

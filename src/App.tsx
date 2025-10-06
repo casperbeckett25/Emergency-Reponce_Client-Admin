@@ -5,6 +5,7 @@ import Login from './components/Login';
 import ClientPortal from './pages/ClientPortal';
 import AdminPortal from './pages/AdminPortal';
 import { EmergencyProvider } from './context/EmergencyContext';
+import { ErrorBoundary } from './components/ErrorBoundary';
 
 function AppContent() {
   const { user, loading, isAdmin } = useAuth();
@@ -50,9 +51,11 @@ function AppContent() {
 
 function App() {
   return (
-    <Router>
-      <AppContent />
-    </Router>
+    <ErrorBoundary>
+      <Router>
+        <AppContent />
+      </Router>
+    </ErrorBoundary>
   );
 }
 

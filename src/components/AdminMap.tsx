@@ -64,7 +64,7 @@ export default function AdminMap() {
             center={{ lat: 40.7128, lng: -74.0060 }}
             zoom={12}
             onLocationClick={handleLocationClick}
-            className="h-96"
+            className="h-[500px]"
           />
         </div>
       </div>
