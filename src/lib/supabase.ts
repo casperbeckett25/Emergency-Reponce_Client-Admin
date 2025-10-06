@@ -56,7 +56,7 @@ export type Database = {
         Row: {
           id: string;
           client_id: string;
-          type: 'panic' | 'accident' | 'assistance';
+          type: 'panic' | 'accident' | 'assistance' | 'fire' | 'hijack' | 'home_intrusion';
           status: 'active' | 'acknowledged' | 'resolved';
           message: string | null;
           location_lat: number;
@@ -67,7 +67,7 @@ export type Database = {
         Insert: {
           id?: string;
           client_id: string;
-          type: 'panic' | 'accident' | 'assistance';
+          type: 'panic' | 'accident' | 'assistance' | 'fire' | 'hijack' | 'home_intrusion';
           status?: 'active' | 'acknowledged' | 'resolved';
           message?: string | null;
           location_lat: number;

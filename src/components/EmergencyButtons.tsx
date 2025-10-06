@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useEmergency } from '../context/EmergencyContext';
-import { AlertTriangle, Car, HelpCircle, Phone } from 'lucide-react';
+import { AlertTriangle, Car, HelpCircle, Phone, Flame, ShieldAlert, Home } from 'lucide-react';
 
 export default function EmergencyButtons() {
   const { createAlert, currentClient } = useEmergency();
@@ -13,6 +13,30 @@ export default function EmergencyButtons() {
       description: 'Immediate emergency assistance needed',
       icon: AlertTriangle,
       color: 'bg-red-600 hover:bg-red-700 focus:ring-red-500',
+      textColor: 'text-white'
+    },
+    {
+      id: 'fire',
+      label: 'FIRE ALERT',
+      description: 'Fire emergency assistance needed',
+      icon: Flame,
+      color: 'bg-red-700 hover:bg-red-800 focus:ring-red-600',
+      textColor: 'text-white'
+    },
+    {
+      id: 'hijack',
+      label: 'HIJACK ALERT',
+      description: 'Vehicle hijacking in progress',
+      icon: ShieldAlert,
+      color: 'bg-purple-600 hover:bg-purple-700 focus:ring-purple-500',
+      textColor: 'text-white'
+    },
+    {
+      id: 'home_intrusion',
+      label: 'HOME INTRUSION',
+      description: 'Unauthorized entry detected',
+      icon: Home,
+      color: 'bg-pink-600 hover:bg-pink-700 focus:ring-pink-500',
       textColor: 'text-white'
     },
     {
@@ -33,16 +57,17 @@ export default function EmergencyButtons() {
     }
   ];
 
-  const handleEmergencyClick = (type: 'panic' | 'accident' | 'assistance') => {
+  const handleEmergencyClick = (type: 'panic' | 'accident' | 'assistance' | 'fire' | 'hijack' | 'home_intrusion') => {
     setShowConfirm(type);
   };
 
-  const confirmAlert = (type: 'panic' | 'accident' | 'assistance') => {
+  const confirmAlert = (type: 'panic' | 'accident' | 'assistance' | 'fire' | 'hijack' | 'home_intrusion') => {
     createAlert(type);
     setShowConfirm(null);
-    
+
     // Show success notification
-    alert(`${type.toUpperCase()} alert sent to security control center!\nYour location has been shared and help is on the way.`);
+    const alertLabel = type.replace('_', ' ').toUpperCase();
+    alert(`${alertLabel} alert sent to security control center!\nYour location has been shared and help is on the way.`);
   };
 
   if (!currentClient) return null;
@@ -54,13 +79,13 @@ export default function EmergencyButtons() {
         <p className="text-gray-600">Press any button below to alert security control center</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {emergencyTypes.map((emergency) => {
           const Icon = emergency.icon;
           return (
             <button
               key={emergency.id}
-              onClick={() => handleEmergencyClick(emergency.id as 'panic' | 'accident' | 'assistance')}
+              onClick={() => handleEmergencyClick(emergency.id as 'panic' | 'accident' | 'assistance' | 'fire' | 'hijack' | 'home_intrusion')}
               className={`${emergency.color} ${emergency.textColor} p-8 rounded-xl shadow-lg transform transition-all duration-200 hover:scale-105 focus:outline-none focus:ring-4 focus:ring-offset-2 active:scale-95`}
             >
               <div className="text-center">
@@ -82,7 +107,7 @@ export default function EmergencyButtons() {
                 <AlertTriangle className="w-8 h-8 text-red-600" />
               </div>
               <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                Confirm {showConfirm.toUpperCase()} Alert
+                Confirm {showConfirm.replace('_', ' ').toUpperCase()} Alert
               </h3>
               <p className="text-gray-600 mb-6">
                 This will immediately notify the security control center and share your current location.
@@ -95,7 +120,7 @@ export default function EmergencyButtons() {
                   Cancel
                 </button>
                 <button
-                  onClick={() => confirmAlert(showConfirm as 'panic' | 'accident' | 'assistance')}
+                  onClick={() => confirmAlert(showConfirm as 'panic' | 'accident' | 'assistance' | 'fire' | 'hijack' | 'home_intrusion')}
                   className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
                 >
                   Send Alert

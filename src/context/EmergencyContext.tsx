@@ -21,7 +21,7 @@ export interface Client {
 export interface Alert {
   id: string;
   clientId: string;
-  type: 'panic' | 'accident' | 'assistance';
+  type: 'panic' | 'accident' | 'assistance' | 'fire' | 'hijack' | 'home_intrusion';
   status: 'active' | 'acknowledged' | 'resolved';
   message?: string;
   location: {
@@ -36,7 +36,7 @@ interface EmergencyContextType {
   alerts: Alert[];
   currentClient: Client | null;
   loading: boolean;
-  createAlert: (type: 'panic' | 'accident' | 'assistance', message?: string) => Promise<void>;
+  createAlert: (type: 'panic' | 'accident' | 'assistance' | 'fire' | 'hijack' | 'home_intrusion', message?: string) => Promise<void>;
   acknowledgeAlert: (alertId: string) => Promise<void>;
   resolveAlert: (alertId: string) => Promise<void>;
   updateLocation: (location: { lat: number; lng: number }) => Promise<void>;
@@ -274,7 +274,7 @@ export function EmergencyProvider({ children }: { children: React.ReactNode }) {
     });
   };
 
-  const createAlert = async (type: 'panic' | 'accident' | 'assistance', message?: string) => {
+  const createAlert = async (type: 'panic' | 'accident' | 'assistance' | 'fire' | 'hijack' | 'home_intrusion', message?: string) => {
     if (!user || !currentClient) {
       throw new Error('User not authenticated');
     }
