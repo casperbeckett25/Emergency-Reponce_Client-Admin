@@ -8,7 +8,7 @@ interface MapLocation {
   name: string;
   type: 'client' | 'alert' | 'current';
   status?: 'active' | 'acknowledged' | 'resolved';
-  alertType?: 'panic' | 'accident' | 'assistance' | 'fire' | 'hijack' | 'home_intrusion';
+  alertType?: 'panic' | 'accident' | 'assistance' | 'fire_and_security' | 'hijack' | 'home_intrusion';
 }
 
 interface InteractiveMapProps {
@@ -94,7 +94,7 @@ export default function InteractiveMap({
       if (location.status === 'acknowledged') return 'bg-yellow-500';
       switch (location.alertType) {
         case 'panic': return 'bg-red-600';
-        case 'fire': return 'bg-red-700';
+        case 'fire_and_security': return 'bg-red-700';
         case 'hijack': return 'bg-purple-600';
         case 'home_intrusion': return 'bg-pink-600';
         case 'accident': return 'bg-orange-600';

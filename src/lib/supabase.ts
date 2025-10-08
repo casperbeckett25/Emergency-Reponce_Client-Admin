@@ -56,7 +56,7 @@ export type Database = {
         Row: {
           id: string;
           client_id: string;
-          type: 'panic' | 'accident' | 'assistance' | 'fire' | 'hijack' | 'home_intrusion';
+          type: 'panic' | 'accident' | 'assistance' | 'fire_and_security' | 'hijack' | 'home_intrusion';
           status: 'active' | 'acknowledged' | 'resolved';
           message: string | null;
           location_lat: number;
@@ -67,7 +67,7 @@ export type Database = {
         Insert: {
           id?: string;
           client_id: string;
-          type: 'panic' | 'accident' | 'assistance' | 'fire' | 'hijack' | 'home_intrusion';
+          type: 'panic' | 'accident' | 'assistance' | 'fire_and_security' | 'hijack' | 'home_intrusion';
           status?: 'active' | 'acknowledged' | 'resolved';
           message?: string | null;
           location_lat: number;
@@ -83,6 +83,40 @@ export type Database = {
           message?: string | null;
           location_lat?: number;
           location_lng?: number;
+          updated_at?: string;
+        };
+      };
+      maintenance_requests: {
+        Row: {
+          id: string;
+          client_id: string;
+          issue_description: string;
+          image_url: string | null;
+          status: 'pending' | 'in_progress' | 'completed' | 'cancelled';
+          priority: 'low' | 'medium' | 'high' | 'urgent';
+          resolved_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          client_id: string;
+          issue_description: string;
+          image_url?: string | null;
+          status?: 'pending' | 'in_progress' | 'completed' | 'cancelled';
+          priority?: 'low' | 'medium' | 'high' | 'urgent';
+          resolved_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          client_id?: string;
+          issue_description?: string;
+          image_url?: string | null;
+          status?: 'pending' | 'in_progress' | 'completed' | 'cancelled';
+          priority?: 'low' | 'medium' | 'high' | 'urgent';
+          resolved_at?: string | null;
           updated_at?: string;
         };
       };

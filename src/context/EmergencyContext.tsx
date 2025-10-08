@@ -21,7 +21,7 @@ export interface Client {
 export interface Alert {
   id: string;
   clientId: string;
-  type: 'panic' | 'accident' | 'assistance' | 'fire' | 'hijack' | 'home_intrusion';
+  type: 'panic' | 'accident' | 'assistance' | 'fire_and_security' | 'hijack' | 'home_intrusion';
   status: 'active' | 'acknowledged' | 'resolved';
   message?: string;
   location: {
@@ -31,14 +31,29 @@ export interface Alert {
   timestamp: Date;
 }
 
+export interface MaintenanceRequest {
+  id: string;
+  clientId: string;
+  issueDescription: string;
+  imageUrl?: string;
+  status: 'pending' | 'in_progress' | 'completed' | 'cancelled';
+  priority: 'low' | 'medium' | 'high' | 'urgent';
+  resolvedAt?: Date;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 interface EmergencyContextType {
   clients: Client[];
   alerts: Alert[];
+  maintenanceRequests: MaintenanceRequest[];
   currentClient: Client | null;
   loading: boolean;
-  createAlert: (type: 'panic' | 'accident' | 'assistance' | 'fire' | 'hijack' | 'home_intrusion', message?: string) => Promise<void>;
+  createAlert: (type: 'panic' | 'accident' | 'assistance' | 'fire_and_security' | 'hijack' | 'home_intrusion', message?: string) => Promise<void>;
   acknowledgeAlert: (alertId: string) => Promise<void>;
   resolveAlert: (alertId: string) => Promise<void>;
+  createMaintenanceRequest: (description: string, imageFile: File | null) => Promise<void>;
+  updateMaintenanceStatus: (requestId: string, status: 'pending' | 'in_progress' | 'completed' | 'cancelled') => Promise<void>;
   updateLocation: (location: { lat: number; lng: number }) => Promise<void>;
   refreshData: () => Promise<void>;
 }
@@ -49,6 +64,7 @@ export function EmergencyProvider({ children }: { children: React.ReactNode }) {
   const { user, isAdmin } = useAuth();
   const [clients, setClients] = useState<Client[]>([]);
   const [alerts, setAlerts] = useState<Alert[]>([]);
+  const [maintenanceRequests, setMaintenanceRequests] = useState<MaintenanceRequest[]>([]);
   const [currentClient, setCurrentClient] = useState<Client | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -66,11 +82,11 @@ export function EmergencyProvider({ children }: { children: React.ReactNode }) {
       setLoading(true);
       
       if (isAdmin()) {
-        // Admin loads all clients and alerts
-        await Promise.all([loadClients(), loadAlerts()]);
+        // Admin loads all clients, alerts, and maintenance requests
+        await Promise.all([loadClients(), loadAlerts(), loadMaintenanceRequests()]);
       } else {
         // Client loads their own data
-        await Promise.all([loadCurrentClient(), loadClientAlerts()]);
+        await Promise.all([loadCurrentClient(), loadClientAlerts(), loadMaintenanceRequests()]);
       }
     } catch (error) {
       console.error('Error loading data:', error);
@@ -274,7 +290,7 @@ export function EmergencyProvider({ children }: { children: React.ReactNode }) {
     });
   };
 
-  const createAlert = async (type: 'panic' | 'accident' | 'assistance' | 'fire' | 'hijack' | 'home_intrusion', message?: string) => {
+  const createAlert = async (type: 'panic' | 'accident' | 'assistance' | 'fire_and_security' | 'hijack' | 'home_intrusion', message?: string) => {
     if (!user || !currentClient) {
       throw new Error('User not authenticated');
     }
@@ -375,6 +391,111 @@ export function EmergencyProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const loadMaintenanceRequests = async () => {
+    if (!user) return;
+
+    const query = supabase
+      .from('maintenance_requests')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (!isAdmin()) {
+      query.eq('client_id', user.id);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      console.error('Error loading maintenance requests:', error);
+      return;
+    }
+
+    const formattedRequests: MaintenanceRequest[] = data.map(req => ({
+      id: req.id,
+      clientId: req.client_id,
+      issueDescription: req.issue_description,
+      imageUrl: req.image_url,
+      status: req.status,
+      priority: req.priority,
+      resolvedAt: req.resolved_at ? new Date(req.resolved_at) : undefined,
+      createdAt: new Date(req.created_at),
+      updatedAt: new Date(req.updated_at)
+    }));
+
+    setMaintenanceRequests(formattedRequests);
+  };
+
+  const createMaintenanceRequest = async (description: string, imageFile: File | null) => {
+    if (!user || !currentClient) {
+      throw new Error('User not authenticated');
+    }
+
+    try {
+      let imageUrl = null;
+
+      if (imageFile) {
+        const fileExt = imageFile.name.split('.').pop();
+        const fileName = `${user.id}/${Date.now()}.${fileExt}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from('maintenance-images')
+          .upload(fileName, imageFile);
+
+        if (uploadError) {
+          console.error('Error uploading image:', uploadError);
+        } else {
+          const { data: urlData } = supabase.storage
+            .from('maintenance-images')
+            .getPublicUrl(fileName);
+          imageUrl = urlData.publicUrl;
+        }
+      }
+
+      const { error } = await supabase
+        .from('maintenance_requests')
+        .insert({
+          client_id: user.id,
+          issue_description: description,
+          image_url: imageUrl,
+          status: 'pending',
+          priority: 'medium'
+        });
+
+      if (error) throw error;
+
+      await loadMaintenanceRequests();
+    } catch (error) {
+      console.error('Error creating maintenance request:', error);
+      throw error;
+    }
+  };
+
+  const updateMaintenanceStatus = async (
+    requestId: string,
+    status: 'pending' | 'in_progress' | 'completed' | 'cancelled'
+  ) => {
+    const updateData: any = {
+      status,
+      updated_at: new Date().toISOString()
+    };
+
+    if (status === 'completed') {
+      updateData.resolved_at = new Date().toISOString();
+    }
+
+    const { error } = await supabase
+      .from('maintenance_requests')
+      .update(updateData)
+      .eq('id', requestId);
+
+    if (error) {
+      console.error('Error updating maintenance status:', error);
+      throw error;
+    }
+
+    await loadMaintenanceRequests();
+  };
+
   const refreshData = async () => {
     await loadData();
   };
@@ -382,11 +503,14 @@ export function EmergencyProvider({ children }: { children: React.ReactNode }) {
   const value: EmergencyContextType = {
     clients,
     alerts,
+    maintenanceRequests,
     currentClient,
     loading,
     createAlert,
     acknowledgeAlert,
     resolveAlert,
+    createMaintenanceRequest,
+    updateMaintenanceStatus,
     updateLocation,
     refreshData
   };
