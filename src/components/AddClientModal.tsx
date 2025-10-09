@@ -28,31 +28,40 @@ export default function AddClientModal({ isOpen, onClose, onClientAdded }: AddCl
     setError('');
 
     try {
-      // Create auth user with default password
       const defaultPassword = 'client123';
-      
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: formData.email,
-        password: defaultPassword,
-      });
 
-      if (authError) throw authError;
+      // Get current session for authentication
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error('Not authenticated');
+      }
 
-      // Create client record with the auth user ID
-      const { error: clientError } = await supabase
-        .from('clients')
-        .insert({
-          id: authData.user?.id,
+      // Call edge function to create client
+      const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-client`;
+
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
           name: formData.name,
           phone: formData.phone,
           email: formData.email,
           address: formData.address,
           emergency_contact: formData.emergencyContact,
-        });
+        }),
+      });
 
-      if (clientError) throw clientError;
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || 'Failed to create client');
+      }
 
       // Reset form and close modal
+      const clientEmail = formData.email;
       setFormData({
         name: '',
         phone: '',
@@ -62,10 +71,11 @@ export default function AddClientModal({ isOpen, onClose, onClientAdded }: AddCl
       });
       onClientAdded();
       onClose();
-      
-      alert(`Client added successfully!\nLogin credentials:\nEmail: ${formData.email}\nPassword: ${defaultPassword}`);
+
+      alert(`Client added successfully!\n\nLogin credentials:\nEmail: ${clientEmail}\nPassword: ${defaultPassword}\n\nThe client can now log in to the client portal.`);
     } catch (err: any) {
-      setError(err.message || 'Failed to add client');
+      console.error('Error adding client:', err);
+      setError(err.message || 'Failed to add client. Please check if the email already exists.');
     } finally {
       setLoading(false);
     }
@@ -266,8 +276,8 @@ export default function AddClientModal({ isOpen, onClose, onClientAdded }: AddCl
               <div>
                 <h5 className="text-sm font-medium text-blue-900">Account Setup</h5>
                 <p className="text-sm text-blue-700 mt-1">
-                  A new client account will be created with the default password "client123". 
-                  The client can change this password after their first login.
+                  A new client account will be created with the default password <strong>"client123"</strong>.
+                  The client can log in immediately and should change their password after first login.
                 </p>
               </div>
             </div>
